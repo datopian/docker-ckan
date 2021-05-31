@@ -28,14 +28,15 @@ RUN apk add --no-cache \
         libtool \
         musl-dev \
         pcre-dev \
+        pcre \
         python-dev
 
 # Create the src directory
 RUN mkdir -p ${SRC_DIR}
 
 # Install pip
-RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
-    python ${SRC_DIR}/get-pip.py
+RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/pip/2.7/get-pip.py && \
+    python ${SRC_DIR}/get-pip.py pip==20.3.3
 
 # Fetch and build CKAN and requirements
 RUN pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan
@@ -55,6 +56,7 @@ ENV SRC_DIR=/srv/app/src
 ENV PIP_SRC=${SRC_DIR}
 ENV CKAN_SITE_URL=http://localhost:5000
 ENV CKAN__PLUGINS image_view text_view recline_view datastore datapusher envvars
+ENV CKAN__VIEWS__DEFAULT_VIEWS dataexplorer
 
 WORKDIR ${APP_DIR}
 
@@ -62,17 +64,19 @@ WORKDIR ${APP_DIR}
 RUN apk add --no-cache git \
         bash \
         gettext \
+        linux-headers \
         curl \
         postgresql-client \
         python \
         libmagic \
+        pcre \
         apache2-utils && \
     # Create SRC_DIR
     mkdir -p ${SRC_DIR}
 
 # Install pip
-RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
-    python ${SRC_DIR}/get-pip.py
+RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/pip/2.7/get-pip.py && \
+    python ${SRC_DIR}/get-pip.py pip==20.3.3
 
 # Get artifacts from build stages
 COPY --from=ckanbuild /wheels /srv/app/wheels
@@ -80,7 +84,6 @@ COPY --from=ckanbuild /srv/app/src/ckan /srv/app/src/ckan
 
 # Copy necessary scripts
 COPY setup/app ${APP_DIR}
-
 # Additional install steps for build stages artifacts
 RUN pip install --no-index --find-links=/srv/app/wheels uwsgi gevent
 
@@ -108,8 +111,6 @@ RUN rm -rf /srv/app/wheels
 RUN mkdir -p /docker-entrypoint.d
 
 EXPOSE 5000
-
-HEALTHCHECK --interval=10s --timeout=5s --retries=5 CMD curl --fail http://localhost:5000/api/3/action/status_show || exit 1
 
 USER ckan
 
