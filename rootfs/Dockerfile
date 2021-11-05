@@ -36,7 +36,11 @@ RUN apk add --no-cache \
         python3-dev \
         libffi-dev \
         libxml2-dev \
-        libxslt-dev
+        libxslt-dev \
+        linux-headers \
+        openssl-dev \
+        libffi-dev \
+        cargo
 
 # Link python to python3
 RUN ln -s /usr/bin/python3 /usr/bin/python
