@@ -4,11 +4,11 @@
 FROM alpine:3.14 as ckanbuild
 
 # Used by Github Actions to tag the image with
-ENV IMAGE_TAG=2.9.7
+ENV IMAGE_TAG=dev-v2.10
 
 # Set CKAN version to build
 ENV GIT_URL=https://github.com/ckan/ckan.git
-ENV GIT_BRANCH=ckan-2.9.7
+ENV GIT_BRANCH=dev-v2.10
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -172,14 +172,14 @@ RUN pip install -e /srv/app/src/ckan && \
     ckan config-tool ${APP_DIR}/production.ini -s logger_ckanext -e level=INFO && \
     chown -R ckan:ckan /srv/app
 
-ENV GIT_BRANCH=ckan-2.9.7
+ENV GIT_BRANCH=dev-v2.10
 ADD https://raw.githubusercontent.com/ckan/ckan/${GIT_BRANCH}/wsgi.py ${APP_DIR}
 RUN pip install setuptools==44.1.0
 # Remove wheels
 RUN rm -rf /srv/app/wheels /srv/app/ext_wheels
 
 # Install Dev requirements
-RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.9.7/dev-requirements.txt
+RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/dev-v2.10/dev-requirements.txt
 # Copy necessary scripts
 COPY setup/start_ckan.sh ${APP_DIR}
 
