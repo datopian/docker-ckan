@@ -178,6 +178,8 @@ RUN pip install setuptools==44.1.0
 # Remove wheels
 RUN rm -rf /srv/app/wheels /srv/app/ext_wheels
 
+# Install Dev requirements
+RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.9.7/dev-requirements.txt
 # Copy necessary scripts
 COPY setup/start_ckan.sh ${APP_DIR}
 
