@@ -1,115 +1,206 @@
-FROM alpine:3.14.2
+##################
+### Build CKAN ###
+##################
+FROM alpine:3.14 as ckanbuild
 
-# Internals, you probably don't need to change these
+# Used by Github Actions to tag the image with
+ENV IMAGE_TAG=2.9.7
+
+# Set CKAN version to build
+ENV GIT_URL=https://github.com/ckan/ckan.git
+ENV GIT_BRANCH=ckan-2.9.7
+
+# Set src dirs
+ENV SRC_DIR=/srv/app/src
+ENV PIP_SRC=${SRC_DIR}
+
+WORKDIR ${SRC_DIR}
+
+# Packages to build CKAN requirements and plugins
+RUN apk add --no-cache \
+        git \
+        curl \
+        python3 \
+        postgresql-dev \
+        linux-headers \
+        gcc \
+        make \
+        g++ \
+        autoconf \
+        automake \
+        libtool \
+        patch \
+        musl-dev \
+        pcre-dev \
+        pcre \
+        python3-dev \
+        libffi-dev \
+        libxml2-dev \
+        libxslt-dev \
+        linux-headers \
+        openssl-dev \
+        libffi-dev \
+        cargo
+
+# Link python to python3
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
+# Create the src directory
+RUN mkdir -p ${SRC_DIR}
+
+# Install pip
+RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
+    python ${SRC_DIR}/get-pip.py
+
+# Downgrade setuptools so that CKAN requirements can be built
+RUN pip install setuptools==44.1.0
+
+# Fetch and build CKAN and requirements
+RUN pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan
+# Copy patches and apply patches script
+#COPY ./patches ${SRC_DIR}/patches
+#COPY ./scripts/apply_ckan_patches.sh ${SRC_DIR}/apply_ckan_patches.sh
+#RUN chmod +x ${SRC_DIR}/apply_ckan_patches.sh
+# Apply patches
+#RUN ${SRC_DIR}/apply_ckan_patches.sh
+RUN rm -rf /srv/app/src/ckan/.git
+RUN pip wheel --wheel-dir=/wheels -r ckan/requirements.txt
+RUN pip wheel --wheel-dir=/wheels uwsgi==2.0.19.1 gevent==21.12.0
+
+###########################
+### Default-Extensions ####
+###########################
+FROM alpine:3.14 as extbuild
+
+# Set src dirs
+ENV SRC_DIR=/srv/app/src
+ENV PIP_SRC=${SRC_DIR}
+
+# List of default extensions
+ENV DEFAULT_EXTENSIONS envvars
+
+# Locations and tags, please use specific tags or revisions
+ENV ENVVARS_GIT_URL=https://github.com/okfn/ckanext-envvars
+ENV ENVVARS_GIT_BRANCH=0.0.1
+
+RUN apk add --no-cache \
+        git \
+        curl \
+        python3 \
+        python3-dev
+
+# Link python to python3
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
+# Create the src directory
+RUN mkdir -p ${SRC_DIR}
+
+# Install pip
+RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
+    python ${SRC_DIR}/get-pip.py
+
+# Fetch and build the default CKAN extensions
+RUN pip wheel --wheel-dir=/wheels git+${ENVVARS_GIT_URL}@${ENVVARS_GIT_BRANCH}#egg=ckanext-envvars
+
+############
+### MAIN ###
+############
+FROM alpine:3.14
+
 ENV APP_DIR=/srv/app
 ENV SRC_DIR=/srv/app/src
-ENV CKAN_INI=${APP_DIR}/ckan.ini
+ENV CKAN_DIR=${SRC_DIR}/ckan
+ENV DATA_DIR=/srv/app/data
 ENV PIP_SRC=${SRC_DIR}
-ENV CKAN_STORAGE_PATH=/var/lib/ckan
-ENV GIT_URL=https://github.com/ckan/ckan.git
-# CKAN version to build
-ENV GIT_BRANCH=ckan-2.9.5
-# Customize these on the .env file if needed
 ENV CKAN_SITE_URL=http://localhost:5000
-
-# UWSGI options
-ENV UWSGI_HARAKIRI=50
-
-WORKDIR ${APP_DIR}
+ENV CKAN__PLUGINS envvars image_view text_view recline_view datastore datapusher
 
 # Install necessary packages to run CKAN
-RUN apk add --no-cache tzdata \
-    git \
-    gettext \
-    postgresql-client \
-    python3 \
-    libxml2 \
-    libxslt \
-    musl-dev \
-    uwsgi \
-    uwsgi-http \
-    uwsgi-corerouter \
-    uwsgi-python \
-    py3-gevent \
-    uwsgi-gevent \
-    libmagic \
-    curl \
-    patch \
-    sudo && \
-    # Packages to build CKAN requirements and plugins
-    apk add --no-cache --virtual .build-deps \
-    postgresql-dev \
-    gcc \
-    make \
-    g++ \
-    autoconf \
-    automake \
-    libtool \
-    python3-dev \
-    libxml2-dev \
-    libxslt-dev \
-    linux-headers \
-    openssl-dev \
-    libffi-dev \
-    cargo && \
+RUN apk add --no-cache git \
+        bash \
+        gettext \
+        curl \
+        postgresql-client \
+        python3 \
+        libmagic \
+        pcre \
+        libxslt \
+        libxml2 \
+        tzdata \
+        apache2-utils && \
     # Create SRC_DIR
     mkdir -p ${SRC_DIR} && \
-    # Install pip, supervisord and uwsgi
-    curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
-    python3 ${SRC_DIR}/get-pip.py && \
-    pip3 install supervisor && \
-    mkdir /etc/supervisord.d && \
-    #pip wheel --wheel-dir=/wheels uwsgi gevent && \
-    rm -rf ${SRC_DIR}/get-pip.py
+    # Link python to python3
+    ln -s /usr/bin/python3 /usr/bin/python
 
-COPY setup/supervisord.conf /etc
+# Install pip
+RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
+    python ${SRC_DIR}/get-pip.py
 
-RUN pip install six --upgrade --ignore-installed six
-RUN pip install packaging --upgrade --ignore-installed packaging
-RUN pip install routes fanstatic unicodecsv
+# Get artifacts from build stages
+COPY --from=ckanbuild /wheels /srv/app/wheels
+COPY --from=extbuild /wheels /srv/app/ext_wheels
+COPY --from=ckanbuild /srv/app/src/ckan ${CKAN_DIR}
 
-# Install CKAN
-RUN pip3 install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan && \
-    cd ${SRC_DIR}/ckan && \
-    cp who.ini ${APP_DIR} && \
-    pip3 install -r https://raw.githubusercontent.com/ckan/ckan/master/requirement-setuptools.txt && \
-    pip3 install -r https://raw.githubusercontent.com/ckan/ckan/master/requirements.txt && \
-    pip3 install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.9.4/dev-requirements.txt && \
-    # Install CKAN envvars to support loading config from environment variables
-    pip3 install -e git+https://github.com/okfn/ckanext-envvars.git#egg=ckanext-envvars && \
-    ckan generate config ${CKAN_INI} && \
-    ckan config-tool ${CKAN_INI} "ckan.plugins = ${CKAN__PLUGINS}" && \
-    ckan config-tool ${CKAN_INI} "ckan.site_url = ${CKAN__SITE_URL}" && \
-    ckan config-tool ${CKAN_INI} -s logger_ckanext -e level=INFO
-
-
-RUN pip install --upgrade pip
+# Additional install steps for build stages artifacts
+RUN pip install --no-index --find-links=/srv/app/wheels uwsgi==2.0.19.1 gevent==21.12.0
 
 # Create a local user and group to run the app
 RUN addgroup -g 92 -S ckan && \
     adduser -u 92 -h /srv/app -H -D -S -G ckan ckan
 
-# Create local storage folder
-RUN mkdir -p $CKAN_STORAGE_PATH && \
-    chown -R ckan:ckan $CKAN_STORAGE_PATH
+WORKDIR ${CKAN_DIR}
 
+# Install CKAN
+RUN pip install -e /srv/app/src/ckan && \
+    cp who.ini ${APP_DIR} && \
+    pip install --no-index --find-links=/srv/app/wheels -r requirements.txt && \
+    # Install default CKAN extensions
+    pip install --no-index --find-links=/srv/app/ext_wheels ckanext-envvars && \
+    # Create and update CKAN config
+    # Set timezone
+    echo "UTC" >  /etc/timezone && \
+    # Generate CKAN config
+    ckan generate config ${APP_DIR}/production.ini && \
+    # Configure plugins
+    ckan config-tool ${APP_DIR}/production.ini "ckan.plugins = ${CKAN__PLUGINS}" && \
+    # Create the data directory
+    mkdir ${DATA_DIR} && \
+    # Webassets can't be loaded from env variables at runtime, it needs to be in the config so that it is created
+    ckan config-tool ${APP_DIR}/production.ini "ckan.webassets.path = ${DATA_DIR}/webassets" && \
+    # Set the default level for extensions to INFO
+    ckan config-tool ${APP_DIR}/production.ini -s logger_ckanext -e level=INFO && \
+    chown -R ckan:ckan /srv/app
 
-COPY setup/prerun.py ${APP_DIR}
-COPY setup/supervisor.worker.conf /etc/supervisord.d/worker.conf
-COPY setup/start_ckan.sh ${APP_DIR}
+ENV GIT_BRANCH=ckan-2.9.7
 ADD https://raw.githubusercontent.com/ckan/ckan/${GIT_BRANCH}/wsgi.py ${APP_DIR}
+RUN pip install setuptools==44.1.0
+# Remove wheels
+RUN rm -rf /srv/app/wheels /srv/app/ext_wheels
 
-# Create entrypoint directory for children image scripts
-ONBUILD RUN mkdir /docker-entrypoint.d
+# Copy necessary scripts
+COPY setup/start_ckan.sh ${APP_DIR}
 
-RUN chown ckan -R /srv/app
+WORKDIR ${APP_DIR}
 
-ENV CKAN__PLUGINS envvars image_view text_view recline_view datastore datapusher
 
-RUN ckan config-tool ${CKAN_INI} "ckan.plugins = ${CKAN__PLUGINS}"
+RUN pip3 install supervisor && \
+    mkdir /etc/supervisord.d
+
+COPY setup/supervisord.conf /etc
+RUN chown -R ckan:ckan ${APP_DIR}
+RUN mkdir -p /var/lib/ckan
+RUN chown -R ckan:ckan /var/lib/ckan
+COPY setup/supervisor.worker.conf /etc/supervisord.d/worker.conf
+
+# Create entrypoint
+ONBUILD RUN mkdir docker-entrypoint.d
+
+# Create afterinit directory for children image scripts
+ONBUILD RUN mkdir docker-afterinit.d
 
 EXPOSE 5000
 
-#HEALTHCHECK --interval=60s --timeout=5s --retries=5 CMD curl --fail http://localhost:5000/api/3/action/status_show || exit 1
-ENV TZ UTC
+USER ckan
+
 CMD ["/srv/app/start_ckan.sh"]

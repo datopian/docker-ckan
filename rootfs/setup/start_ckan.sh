@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Run the prerun script to init CKAN and create the default admin user
-sudo -u ckan -EH python3 prerun.py
+python3 prerun.py
 
 # Run any startup scripts provided by images extending this one
 if [[ -d "/docker-entrypoint.d" ]]
@@ -17,8 +17,7 @@ then
 fi
 
 # Set the common uwsgi options
-UWSGI_OPTS="--plugins http,python \
-            --socket /tmp/uwsgi.sock \
+UWSGI_OPTS="--socket /tmp/uwsgi.sock \
             --wsgi-file /srv/app/wsgi.py \
             --module wsgi:application \
             --uid 92 --gid 92 \
@@ -33,7 +32,7 @@ then
     # Start supervisord
     supervisord --configuration /etc/supervisord.conf &
     # Start uwsgi
-    sudo -u ckan -EH uwsgi $UWSGI_OPTS
+    uwsgi $UWSGI_OPTS
 else
   echo "[prerun] failed...not starting CKAN."
 fi
