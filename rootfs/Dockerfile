@@ -1,14 +1,14 @@
 ##################
 ### Build CKAN ###
 ##################
-FROM alpine:3.14 as ckanbuild
+FROM alpine:3.15 as ckanbuild
 
 # Used by Github Actions to tag the image with
-ENV IMAGE_TAG=dev-v2.10
+ENV IMAGE_TAG=ckan-2.10.1
 
 # Set CKAN version to build
 ENV GIT_URL=https://github.com/ckan/ckan.git
-ENV GIT_BRANCH=dev-v2.10
+ENV GIT_BRANCH=ckan-2.10.1
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -70,7 +70,7 @@ RUN pip wheel --wheel-dir=/wheels uwsgi==2.0.19.1 gevent==21.12.0
 ###########################
 ### Default-Extensions ####
 ###########################
-FROM alpine:3.14 as extbuild
+FROM alpine:3.15 as extbuild
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -105,7 +105,7 @@ RUN pip wheel --wheel-dir=/wheels git+${ENVVARS_GIT_URL}@${ENVVARS_GIT_BRANCH}#e
 ############
 ### MAIN ###
 ############
-FROM alpine:3.14
+FROM alpine:3.15
 
 ENV APP_DIR=/srv/app
 ENV SRC_DIR=/srv/app/src
@@ -179,7 +179,7 @@ RUN pip install setuptools==44.1.0
 RUN rm -rf /srv/app/wheels /srv/app/ext_wheels
 
 # Install Dev requirements
-RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/dev-v2.10/dev-requirements.txt
+RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.10.1/dev-requirements.txt
 # Copy necessary scripts
 COPY setup/start_ckan.sh ${APP_DIR}
 
