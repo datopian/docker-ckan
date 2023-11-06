@@ -1,7 +1,7 @@
 ##################
 ### Build CKAN ###
 ##################
-FROM alpine:3.15 as ckanbuild
+FROM alpine:3.17.5 as ckanbuild
 
 # Used by Github Actions to tag the image with
 ENV IMAGE_TAG=ckan-2.10.1
@@ -64,13 +64,14 @@ RUN pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan
 # Apply patches
 #RUN ${SRC_DIR}/apply_ckan_patches.sh
 RUN rm -rf /srv/app/src/ckan/.git
+COPY requirements.txt ckan/requirements.txt
 RUN pip wheel --wheel-dir=/wheels -r ckan/requirements.txt
-RUN pip wheel --wheel-dir=/wheels uwsgi==2.0.19.1 gevent==21.12.0
+RUN pip wheel --wheel-dir=/wheels uwsgi gevent
 
 ###########################
 ### Default-Extensions ####
 ###########################
-FROM alpine:3.15 as extbuild
+FROM alpine:3.17.5 as extbuild
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -105,7 +106,7 @@ RUN pip wheel --wheel-dir=/wheels git+${ENVVARS_GIT_URL}@${ENVVARS_GIT_BRANCH}#e
 ############
 ### MAIN ###
 ############
-FROM alpine:3.15
+FROM alpine:3.17.5
 
 ENV APP_DIR=/srv/app
 ENV SRC_DIR=/srv/app/src
@@ -143,7 +144,7 @@ COPY --from=extbuild /wheels /srv/app/ext_wheels
 COPY --from=ckanbuild /srv/app/src/ckan ${CKAN_DIR}
 
 # Additional install steps for build stages artifacts
-RUN pip install --no-index --find-links=/srv/app/wheels uwsgi==2.0.19.1 gevent==21.12.0
+RUN pip install --no-index --find-links=/srv/app/wheels uwsgi gevent
 
 # Create a local user and group to run the app
 RUN addgroup -g 92 -S ckan && \
