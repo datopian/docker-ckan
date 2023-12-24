@@ -4,11 +4,11 @@
 FROM alpine:3.17.5 as ckanbuild
 
 # Used by Github Actions to tag the image with
-ENV IMAGE_TAG=ckan-2.10.1
+ENV IMAGE_TAG=ckan-2.10.3
 
 # Set CKAN version to build
 ENV GIT_URL=https://github.com/ckan/ckan.git
-ENV GIT_BRANCH=ckan-2.10.1
+ENV GIT_BRANCH=ckan-2.10.3
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -43,7 +43,7 @@ RUN apk add --no-cache \
         cargo
 
 # Link python to python3
-RUN ln -s /usr/bin/python3 /usr/bin/python
+#RUN ln -s /usr/bin/python3 /usr/bin/python
 
 # Create the src directory
 RUN mkdir -p ${SRC_DIR}
@@ -91,7 +91,7 @@ RUN apk add --no-cache \
         python3-dev
 
 # Link python to python3
-RUN ln -s /usr/bin/python3 /usr/bin/python
+#RUN ln -s /usr/bin/python3 /usr/bin/python
 
 # Create the src directory
 RUN mkdir -p ${SRC_DIR}
@@ -130,9 +130,9 @@ RUN apk add --no-cache git \
         tzdata \
         apache2-utils && \
     # Create SRC_DIR
-    mkdir -p ${SRC_DIR} && \
+    mkdir -p ${SRC_DIR}
     # Link python to python3
-    ln -s /usr/bin/python3 /usr/bin/python
+    #ln -s /usr/bin/python3 /usr/bin/python
 
 # Install pip
 RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
@@ -180,7 +180,7 @@ RUN pip install setuptools==44.1.0
 RUN rm -rf /srv/app/wheels /srv/app/ext_wheels
 
 # Install Dev requirements
-RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.10.1/dev-requirements.txt
+RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.10.3/dev-requirements.txt
 # Copy necessary scripts
 COPY setup/start_ckan.sh ${APP_DIR}
 
