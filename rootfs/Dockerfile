@@ -4,11 +4,11 @@
 FROM alpine:3.17.5 as ckanbuild
 
 # Used by Github Actions to tag the image with
-ENV IMAGE_TAG=ckan-2.10.3
+ENV IMAGE_TAG=ckan-2.10.4
 
 # Set CKAN version to build
 ENV GIT_URL=https://github.com/ckan/ckan.git
-ENV GIT_BRANCH=ckan-2.10.3
+ENV GIT_BRANCH=ckan-2.10.4
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -17,54 +17,41 @@ ENV PIP_SRC=${SRC_DIR}
 WORKDIR ${SRC_DIR}
 
 # Packages to build CKAN requirements and plugins
-RUN apk add --no-cache \
-        git \
-        curl \
-        python3 \
+RUN apk add --no-cache --virtual .build-deps \
         postgresql-dev \
-        linux-headers \
         gcc \
         make \
         g++ \
         autoconf \
         automake \
         libtool \
-        patch \
-        musl-dev \
-        pcre-dev \
-        pcre \
         python3-dev \
-        libffi-dev \
         libxml2-dev \
         libxslt-dev \
         linux-headers \
         openssl-dev \
         libffi-dev \
-        cargo
+        cargo \
+        git \
+        curl && \
+    # Create SRC_DIR
+    mkdir -p ${SRC_DIR} && \
+    # Install pip, supervisord and uwsgi
+    curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
+    python ${SRC_DIR}/get-pip.py && \
+    rm -rf ${SRC_DIR}/get-pip.py
 
-# Link python to python3
-#RUN ln -s /usr/bin/python3 /usr/bin/python
+COPY setup/supervisord.conf /etc
 
 # Create the src directory
 RUN mkdir -p ${SRC_DIR}
-
-# Install pip
-RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
-    python ${SRC_DIR}/get-pip.py
 
 # Downgrade setuptools so that CKAN requirements can be built
 RUN pip install setuptools==44.1.0
 
 # Fetch and build CKAN and requirements
 RUN pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan
-# Copy patches and apply patches script
-#COPY ./patches ${SRC_DIR}/patches
-#COPY ./scripts/apply_ckan_patches.sh ${SRC_DIR}/apply_ckan_patches.sh
-#RUN chmod +x ${SRC_DIR}/apply_ckan_patches.sh
-# Apply patches
-#RUN ${SRC_DIR}/apply_ckan_patches.sh
 RUN rm -rf /srv/app/src/ckan/.git
-COPY requirements.txt ckan/requirements.txt
 RUN pip wheel --wheel-dir=/wheels -r ckan/requirements.txt
 RUN pip wheel --wheel-dir=/wheels uwsgi gevent
 
@@ -118,21 +105,26 @@ ENV CKAN__PLUGINS envvars image_view text_view recline_view datastore datapusher
 
 # Install necessary packages to run CKAN
 RUN apk add --no-cache git \
-        bash \
         gettext \
-        curl \
         postgresql-client \
-        python3 \
-        libmagic \
-        pcre \
-        libxslt \
+        python3-dev \
         libxml2 \
-        tzdata \
-        apache2-utils && \
+        libxslt \
+        musl-dev \
+        uwsgi \
+        uwsgi-http \
+        uwsgi-corerouter \
+        uwsgi-python \
+        py3-gevent \
+        uwsgi-gevent \
+        libmagic \
+        curl \
+        patch \
+        bash \
+        libpq-dev \
+        gcc && \
     # Create SRC_DIR
     mkdir -p ${SRC_DIR}
-    # Link python to python3
-    #ln -s /usr/bin/python3 /usr/bin/python
 
 # Install pip
 RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
@@ -155,6 +147,7 @@ WORKDIR ${CKAN_DIR}
 # Install CKAN
 RUN pip install -e /srv/app/src/ckan && \
     cp who.ini ${APP_DIR} && \
+    pip install --no-binary markdown -r requirements.txt && \
     pip install --no-index --find-links=/srv/app/wheels -r requirements.txt && \
     # Install default CKAN extensions
     pip install --no-index --find-links=/srv/app/ext_wheels ckanext-envvars && \
@@ -173,15 +166,16 @@ RUN pip install -e /srv/app/src/ckan && \
     ckan config-tool ${APP_DIR}/production.ini -s logger_ckanext -e level=INFO && \
     chown -R ckan:ckan /srv/app
 
-ENV GIT_BRANCH=dev-v2.10
+ENV GIT_BRANCH=ckan-2.10.4
 ADD https://raw.githubusercontent.com/ckan/ckan/${GIT_BRANCH}/wsgi.py ${APP_DIR}
-RUN pip install setuptools==44.1.0
+RUN pip install -U pip setuptools
 # Remove wheels
 RUN rm -rf /srv/app/wheels /srv/app/ext_wheels
 
 # Install Dev requirements
-RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.10.3/dev-requirements.txt
+RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.10.4/dev-requirements.txt
 # Copy necessary scripts
+COPY setup/prerun.py ${APP_DIR}
 COPY setup/start_ckan.sh ${APP_DIR}
 
 WORKDIR ${APP_DIR}
