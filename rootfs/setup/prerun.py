@@ -77,6 +77,7 @@ def create_sysadmin():
     name = os.environ.get('CKAN_SYSADMIN_NAME')
     password = os.environ.get('CKAN_SYSADMIN_PASSWORD')
     email = os.environ.get('CKAN_SYSADMIN_EMAIL')
+    print(f'[prerun] Creating sysadmin user {name} with email {email}')
 
     if name and password and email:
 
@@ -84,7 +85,7 @@ def create_sysadmin():
         command = ['ckan', 'user', 'show', name]
 
         out = subprocess.check_output(command)
-        if 'User: \n None\n' not in str(out):
+        if 'User: \n None\n' not in str(out) and name in str(out):
             print('[prerun] Sysadmin user exists, skipping creation')
             return
 

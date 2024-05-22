@@ -167,16 +167,12 @@ RUN pip install -e /srv/app/src/ckan && \
     chown -R ckan:ckan /srv/app
 
 ENV GIT_BRANCH=ckan-2.10.4
-ADD https://raw.githubusercontent.com/ckan/ckan/${GIT_BRANCH}/wsgi.py ${APP_DIR}
 RUN pip install -U pip setuptools
 # Remove wheels
 RUN rm -rf /srv/app/wheels /srv/app/ext_wheels
 
 # Install Dev requirements
 RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.10.4/dev-requirements.txt
-# Copy necessary scripts
-COPY setup/prerun.py ${APP_DIR}
-COPY setup/start_ckan.sh ${APP_DIR}
 
 WORKDIR ${APP_DIR}
 
@@ -198,6 +194,14 @@ ONBUILD RUN mkdir docker-afterinit.d
 
 EXPOSE 5000
 
+# Copy necessary scripts
+COPY setup/prerun.py ${APP_DIR}/prerun.py
+COPY setup/start_ckan.sh ${APP_DIR}/start_ckan.sh
+COPY setup/wsgi.py ${APP_DIR}/wsgi.py
+
 USER ckan
+
+ENV CKAN_INI=${APP_DIR}/production.ini
+ENV UWSGI_HARAKIRI=120
 
 CMD ["/srv/app/start_ckan.sh"]
