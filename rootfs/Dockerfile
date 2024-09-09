@@ -8,7 +8,7 @@ ENV IMAGE_TAG=ckan-2.10.0.alpine-3.18
 
 # Set CKAN version to build
 ENV GIT_URL=https://github.com/ckan/ckan.git
-ENV GIT_BRANCH=ckan-2.10
+ENV GIT_BRANCH=ckan-2.10.5
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
