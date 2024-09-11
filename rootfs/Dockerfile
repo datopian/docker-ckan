@@ -4,11 +4,11 @@
 FROM alpine:3.18.8 AS ckanbuild
 
 # Used by Github Actions to tag the image with
-ENV IMAGE_TAG=ckan-2.10.0.alpine-3.18
+ENV IMAGE_TAG=ckan-2.10.3.alpine-3.18
 
 # Set CKAN version to build
 ENV GIT_URL=https://github.com/ckan/ckan.git
-ENV GIT_BRANCH=ckan-2.10.5
+ENV GIT_BRANCH=ckan-2.10.3
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -66,12 +66,12 @@ RUN pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan
 RUN rm -rf /srv/app/src/ckan/.git
 COPY requirements.txt ckan/requirements.txt
 RUN pip wheel --wheel-dir=/wheels -r ckan/requirements.txt
-RUN pip wheel --wheel-dir=/wheels uwsgi gevent greenlet>=2.0.0
+RUN pip wheel --wheel-dir=/wheels uwsgi gevent
 
 ###########################
 ### Default-Extensions ####
 ###########################
-FROM alpine:3.18.8 AS extbuild
+FROM alpine:3.18.8 as extbuild
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -144,7 +144,7 @@ COPY --from=extbuild /wheels /srv/app/ext_wheels
 COPY --from=ckanbuild /srv/app/src/ckan ${CKAN_DIR}
 
 # Additional install steps for build stages artifacts
-RUN pip install --no-index --find-links=/srv/app/wheels uwsgi gevent greenlet>=2.0.0
+RUN pip install --no-index --find-links=/srv/app/wheels uwsgi gevent
 
 # Create a local user and group to run the app
 RUN addgroup -g 92 -S ckan && \
@@ -154,7 +154,7 @@ WORKDIR ${CKAN_DIR}
 
 # Install CKAN
 RUN pip install -e /srv/app/src/ckan && \
-    #cp who.ini ${APP_DIR} && \
+    cp who.ini ${APP_DIR} && \
     pip install --no-index --find-links=/srv/app/wheels -r requirements.txt && \
     # Install default CKAN extensions
     pip install --no-index --find-links=/srv/app/ext_wheels ckanext-envvars && \
@@ -180,7 +180,7 @@ RUN pip install setuptools==44.1.0
 RUN rm -rf /srv/app/wheels /srv/app/ext_wheels
 
 # Install Dev requirements
-RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.10.0/dev-requirements.txt
+RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.10.3/dev-requirements.txt
 # Copy necessary scripts
 COPY setup/start_ckan.sh ${APP_DIR}
 
