@@ -1,7 +1,7 @@
 ##################
 ### Build CKAN ###
 ##################
-FROM alpine:3.17.5 as ckanbuild
+FROM alpine:3.18.8 as ckanbuild
 
 # Used by Github Actions to tag the image with
 ENV IMAGE_TAG=ckan-2.10.3
@@ -71,7 +71,7 @@ RUN pip wheel --wheel-dir=/wheels uwsgi gevent
 ###########################
 ### Default-Extensions ####
 ###########################
-FROM alpine:3.17.5 as extbuild
+FROM alpine:3.18.8 as extbuild
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -106,7 +106,7 @@ RUN pip wheel --wheel-dir=/wheels git+${ENVVARS_GIT_URL}@${ENVVARS_GIT_BRANCH}#e
 ############
 ### MAIN ###
 ############
-FROM alpine:3.17.5
+FROM alpine:3.18.8
 
 ENV APP_DIR=/srv/app
 ENV SRC_DIR=/srv/app/src
