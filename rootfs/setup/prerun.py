@@ -5,7 +5,7 @@ import psycopg2
 import urllib.request as urllib2
 
 
-ckan_ini = os.environ.get('CKAN_INI', '/srv/app/production.ini')
+ckan_ini = os.environ.get('CKAN_INI', '/srv/app/ckan.ini')
 
 RETRY = 5
 

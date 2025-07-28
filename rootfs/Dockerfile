@@ -4,11 +4,11 @@
 FROM alpine:3.18.8 AS ckanbuild
 
 # Used by Github Actions to tag the image with
-ENV IMAGE_TAG=ckan-2.11.0
+ENV IMAGE_TAG=ckan-2.11.3
 
 # Set CKAN version to build
 ENV GIT_URL=https://github.com/ckan/ckan.git
-ENV GIT_BRANCH=ckan-2.11.0
+ENV GIT_BRANCH=ckan-2.11.3
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -114,7 +114,6 @@ ENV CKAN_DIR=${SRC_DIR}/ckan
 ENV DATA_DIR=/srv/app/data
 ENV PIP_SRC=${SRC_DIR}
 ENV CKAN_SITE_URL=http://localhost:5000
-ENV CKAN__PLUGINS envvars image_view text_view recline_view datastore datapusher
 
 # Install necessary packages to run CKAN
 RUN apk add --no-cache git \
@@ -162,18 +161,20 @@ RUN pip install -e /srv/app/src/ckan && \
     # Set timezone
     echo "UTC" >  /etc/timezone && \
     # Generate CKAN config
-    ckan generate config ${APP_DIR}/production.ini && \
+    ckan generate config ${APP_DIR}/ckan.ini && \
     # Configure plugins
-    ckan config-tool ${APP_DIR}/production.ini "ckan.plugins = ${CKAN__PLUGINS}" && \
+    ckan config-tool ${APP_DIR}/ckan.ini "ckan.plugins = envvars image_view text_view datastore datapusher" && \
+    # Set dummy datapusher API token
+    ckan config-tool ${APP_DIR}/ckan.ini "ckan.datapusher.api_token = 123456789abcdef" && \
     # Create the data directory
     mkdir ${DATA_DIR} && \
     # Webassets can't be loaded from env variables at runtime, it needs to be in the config so that it is created
-    ckan config-tool ${APP_DIR}/production.ini "ckan.webassets.path = ${DATA_DIR}/webassets" && \
+    ckan config-tool ${APP_DIR}/ckan.ini "ckan.webassets.path = ${DATA_DIR}/webassets" && \
     # Set the default level for extensions to INFO
-    ckan config-tool ${APP_DIR}/production.ini -s logger_ckanext -e level=INFO && \
+    ckan config-tool ${APP_DIR}/ckan.ini -s logger_ckanext -e level=INFO && \
     chown -R ckan:ckan /srv/app
 
-ENV GIT_BRANCH=dev-v2.10
+ENV GIT_BRANCH=dev-v2.11
 ADD https://raw.githubusercontent.com/ckan/ckan/${GIT_BRANCH}/wsgi.py ${APP_DIR}
 RUN pip install setuptools==44.1.0
 # Remove wheels

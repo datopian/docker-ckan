@@ -2,7 +2,7 @@
 '''
 This is a helpful wrapper to run CKAN paster commands, so instead of running:
 
-    paster --plugin=ckan sysadmin add admin -c /etc/ckan/default/production.ini
+    paster --plugin=ckan sysadmin add admin -c /etc/ckan/default/ckan.ini
 
 you can run
 
@@ -31,10 +31,10 @@ for num, arg in enumerate(sys.argv):
 
 if not config:
     try:
-        config_file = '/srv/app/production.ini'
+        config_file = '/srv/app/ckan.ini'
         fh = open(config_file)
     except IOError as e:
-        raise Exception('No production.ini in /srv/app. '
+        raise Exception('No ckan.ini in /srv/app. '
                         'Create one or use the -c config_file option')
 
 if not config and len(sys.argv) > 1:
