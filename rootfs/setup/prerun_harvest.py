@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 import sqlalchemy.exc
 
 
-ckan_ini = os.environ.get('CKAN_INI', 'production.ini')
+ckan_ini = os.environ.get('CKAN_INI', 'ckan.ini')
 app_dir = os.environ.get('APP_DIR')
 
 if app_dir:
