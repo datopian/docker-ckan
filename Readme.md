@@ -6,10 +6,7 @@ Please visit [ViderumGlobal (Deprecated)](https://github.com/ViderumGlobal/docke
 
 All the CKAN images are placed in their respective branch. Checkout a version. Build and tag the image and push to dockerhub.
 
-Following are the branches for the CKAN versions
-* ckan-2.9
-* ckan-2.8
-* ckan-2.7
+You can find the existing image tags on [DockerHub](https://hub.docker.com/r/viderum/ckan/tags).
 
 ## Usage
 
