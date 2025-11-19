@@ -4,11 +4,11 @@
 FROM alpine:3.18.8 AS ckanbuild
 
 # Used by Github Actions to tag the image with
-ENV IMAGE_TAG=ckan-2.11.3
+ENV IMAGE_TAG=ckan-2.11.4
 
 # Set CKAN version to build
 ENV GIT_URL=https://github.com/ckan/ckan.git
-ENV GIT_BRANCH=ckan-2.11.3
+ENV GIT_BRANCH=ckan-2.11.4
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -181,7 +181,7 @@ RUN pip install setuptools==44.1.0
 RUN rm -rf /srv/app/wheels /srv/app/ext_wheels
 
 # Install Dev requirements
-RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.11.0/dev-requirements.txt
+RUN pip install -r https://raw.githubusercontent.com/ckan/ckan/ckan-2.11.4/dev-requirements.txt
 # Copy necessary scripts
 COPY setup/start_ckan.sh ${APP_DIR}
 
